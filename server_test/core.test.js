@@ -105,3 +105,15 @@ test('askGemini retries without search when search quota is refused (429)', asyn
   assert.equal(out.answer, 'Steps');
   assert.deepEqual(out.sources, []);
 });
+
+test('askGemini tries once more after a 503 "high demand"', async () => {
+  let n = 0;
+  const fetchFn = async () => {
+    n++;
+    if (n === 1) return { ok: false, status: 503, text: async () => 'busy' };
+    return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] }) };
+  };
+  const out = await askGemini({ lang: 'en', messages: [{ role: 'user', text: 'x' }] }, { apiKey: 'k', fetchFn });
+  assert.equal(out.answer, 'OK');
+  assert.equal(n, 2);
+});
