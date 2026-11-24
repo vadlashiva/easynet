@@ -42,6 +42,8 @@ def android(path: Path) -> None:
 IOS_KEYS = {
     "NSMicrophoneUsageDescription": "EasyNet uses the microphone so you can ask questions by voice.",
     "NSSpeechRecognitionUsageDescription": "EasyNet turns your voice into text to understand your question.",
+    "NSCameraUsageDescription": "EasyNet uses the camera so you can take a photo of a form, bill, plant or product and ask about it.",
+    "NSPhotoLibraryUsageDescription": "EasyNet lets you choose a photo or screenshot to ask about.",
 }
 
 

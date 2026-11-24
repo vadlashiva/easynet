@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { askGemini, parseBody, redact, systemPrompt } from '../server/core.js';
+import { askGemini, extractReminder, parseBody, redact, systemPrompt } from '../server/core.js';
 import handler from '../api/chat.js';
 
 test('redact hides card, Aadhaar, account numbers and OTPs but keeps PNR and phone', () => {
@@ -116,4 +116,40 @@ test('askGemini tries once more after a 503 "high demand"', async () => {
   const out = await askGemini({ lang: 'en', messages: [{ role: 'user', text: 'x' }] }, { apiKey: 'k', fetchFn });
   assert.equal(out.answer, 'OK');
   assert.equal(n, 2);
+});
+
+test('helper modes add their own instructions; unknown mode is general', () => {
+  assert.match(systemPrompt('en', 'scam'), /SCAM CHECKER/);
+  assert.match(systemPrompt('kn', 'farmer'), /FARMER HELPER/);
+  assert.match(systemPrompt('en', 'reminder'), /REMINDER:/);
+  assert.equal(parseBody({ mode: 'hack', messages: [{ role: 'user', text: 'x' }] }).mode, 'general');
+  assert.equal(parseBody({ mode: 'photo', messages: [{ role: 'user', text: 'x' }] }).mode, 'photo');
+});
+
+test('photo: accepted when small and an image type, rejected otherwise', () => {
+  const ok = parseBody({ messages: [{ role: 'user', text: 'what is this' }], image: { mime: 'image/jpeg', data: 'QUJD' } });
+  assert.deepEqual(ok.image, { mime: 'image/jpeg', data: 'QUJD' });
+  assert.throws(() => parseBody({ messages: [{ role: 'user', text: 'x' }], image: { mime: 'text/html', data: 'QUJD' } }), /jpeg/);
+  assert.throws(() => parseBody({ messages: [{ role: 'user', text: 'x' }], image: { mime: 'image/png', data: 'not base64!' } }), /invalid/);
+  assert.throws(() => parseBody({ messages: [{ role: 'user', text: 'x' }], image: { mime: 'image/png', data: 'A'.repeat(4_000_001) } }), /too large/);
+});
+
+test('photo is sent with the latest user message only', async () => {
+  const cap = {};
+  await askGemini({ lang: 'en', mode: 'photo', image: { mime: 'image/png', data: 'QUJD' },
+    messages: [{ role: 'user', text: 'a' }, { role: 'model', text: 'b' }, { role: 'user', text: 'c' }] },
+  { apiKey: 'k', fetchFn: fakeGemini(cap) });
+  const c = cap.body.contents;
+  assert.equal(c[0].parts.length, 1);
+  assert.deepEqual(c[2].parts[0], { inline_data: { mime_type: 'image/png', data: 'QUJD' } });
+  assert.match(cap.body.systemInstruction.parts[0].text, /PHOTO SEARCH/);
+});
+
+test('reminder line is taken out of the answer and checked', () => {
+  const r = extractReminder('Pay GESCOM bill of Rs 450.\nREMINDER: {"title": "Pay electricity bill", "date": "2026-12-05"}');
+  assert.equal(r.answer, 'Pay GESCOM bill of Rs 450.');
+  assert.deepEqual(r.reminder, { title: 'Pay electricity bill', date: '2026-12-05' });
+  assert.equal(extractReminder('No date here').reminder, null);
+  assert.equal(extractReminder('x\nREMINDER: {"title":"t","date":"05-12-2026"}').reminder, null);
+  assert.equal(extractReminder('x\nREMINDER: {broken').answer, 'x\nREMINDER: {broken');
 });

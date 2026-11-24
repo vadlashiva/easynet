@@ -15,12 +15,17 @@ class Api {
   static Future<Message> ask({
     required String lang,
     required List<Message> history,
+    String mode = 'general',
+    String? imageBase64,
+    String imageMime = 'image/jpeg',
   }) async {
     // Send only the last 12 turns to keep requests small.
     final recent = history.length > 12 ? history.sublist(history.length - 12) : history;
     final body = jsonEncode({
       'lang': lang,
+      'mode': mode,
       'messages': recent.map((m) => {'role': m.role, 'text': m.text}).toList(),
+      if (imageBase64 != null) 'image': {'mime': imageMime, 'data': imageBase64},
     });
 
     final res = await http
@@ -29,7 +34,7 @@ class Api {
           headers: {'Content-Type': 'application/json'},
           body: body,
         )
-        .timeout(const Duration(seconds: 60));
+        .timeout(const Duration(seconds: 90));
 
     if (res.statusCode != 200) {
       throw Exception('Server error ${res.statusCode}');
@@ -42,6 +47,15 @@ class Api {
         .map((m) => Source.fromJson(Map<String, dynamic>.from(m)))
         .where((s) => s.url.startsWith('http'))
         .toList();
-    return Message(role: 'model', text: answer, sources: sources);
+    Reminder? reminder;
+    final r = data['reminder'];
+    if (r is Map && r['title'] != null && r['date'] != null) {
+      reminder = Reminder(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        title: r['title'].toString(),
+        date: r['date'].toString(),
+      );
+    }
+    return Message(role: 'model', text: answer, sources: sources, reminder: reminder);
   }
 }
