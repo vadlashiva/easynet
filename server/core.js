@@ -69,11 +69,24 @@ export async function askGemini({ lang, messages }, { apiKey, fetchFn = fetch, m
   if (!apiKey) throw Object.assign(new Error('GEMINI_API_KEY is not set'), { status: 500 });
   const useSearch = process.env.GEMINI_SEARCH !== 'off';
   try {
-    return await callGemini({ lang, messages, apiKey, fetchFn, model, useSearch });
+    return await callWithRetry({ lang, messages, apiKey, fetchFn, model, useSearch });
   } catch (e) {
     // Google Search grounding is not in the free tier for Gemini 3.x: answer without it.
     if (useSearch && e.geminiStatus === 429) {
-      return await callGemini({ lang, messages, apiKey, fetchFn, model, useSearch: false });
+      return await callWithRetry({ lang, messages, apiKey, fetchFn, model, useSearch: false });
+    }
+    throw e;
+  }
+}
+
+// Google sometimes answers 503 "high demand" for a moment: wait and try once more.
+async function callWithRetry(args, waitMs = 2000) {
+  try {
+    return await callGemini(args);
+  } catch (e) {
+    if (e.geminiStatus === 503 || e.geminiStatus === 500) {
+      await new Promise((r) => setTimeout(r, waitMs));
+      return await callGemini(args);
     }
     throw e;
   }
