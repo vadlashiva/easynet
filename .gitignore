@@ -1,0 +1,22 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+*.iml
+.idea/
+# Platform folders are generated in CI by `flutter create .`
+# (commit them later if you customise icons or signing)
+/android/
+/ios/
+/web/
+/linux/
+/macos/
+/windows/
+
+# Node / Vercel
+node_modules/
+.vercel/
+.env
+.env.*

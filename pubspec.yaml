@@ -1,0 +1,24 @@
+name: easynet
+description: "EasyNet: your personal assistant for the internet. Ask by voice or text in English, Hindi or Kannada."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  shared_preferences: ^2.3.2
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

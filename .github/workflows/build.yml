@@ -1,0 +1,52 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm test
+
+  app:
+    runs-on: ubuntu-latest
+    env:
+      # Set this in GitHub: Settings → Secrets and variables → Actions → Variables → API_URL
+      API_URL: ${{ vars.API_URL || 'https://easynet.vercel.app' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Create Android, iOS and web folders
+        run: flutter create --platforms=android,ios,web --project-name easynet --org in.easynet .
+      - name: Add microphone and speech permissions
+        run: python3 scripts/add_permissions.py .
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - run: flutter test
+      - name: Build Android APK
+        run: flutter build apk --release --dart-define=API_URL=$API_URL
+      - name: Build web app
+        run: flutter build web --release --dart-define=API_URL=$API_URL
+      - uses: actions/upload-artifact@v4
+        with:
+          name: easynet-android-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: easynet-web
+          path: build/web
