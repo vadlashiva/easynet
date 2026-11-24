@@ -1,4 +1,5 @@
 import 'package:easynet/lang.dart';
+import 'package:easynet/services/links.dart';
 import 'package:easynet/services/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,5 +24,15 @@ void main() {
     expect(back.messages.length, 2);
     expect(back.messages.last.sources.first.url, 'https://incometax.gov.in');
     expect(back.lang, 'kn');
+  });
+
+  test('finds tappable websites in an answer', () {
+    const text = 'Go to **[www.indianrail.gov.in**](https://www.indianrail.gov.in**) '
+        'or https://www.irctc.co.in/nget/ and uidai.gov.in. Mail care@irctc.co.in.';
+    final links = Links.find(text, const []);
+    expect(links.map((l) => Uri.parse(l.url).host).toList(),
+        ['www.indianrail.gov.in', 'www.irctc.co.in', 'uidai.gov.in']);
+    expect(Links.clean(text), isNot(contains('**')));
+    expect(Links.clean(text), isNot(contains('](')));
   });
 }

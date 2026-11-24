@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../lang.dart';
 import '../services/api.dart';
+import '../services/links.dart';
 import '../services/models.dart';
 import '../services/storage.dart';
 import '../services/voice.dart';
@@ -217,6 +218,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _answerCard(int i, Message m, ColorScheme scheme) {
     final speaking = _speakingIndex == i;
+    final links = Links.find(m.text, m.sources);
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -224,24 +226,25 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SelectableText(_clean(m.text), style: const TextStyle(height: 1.5)),
-            if (m.sources.isNotEmpty) ...[
+            SelectableText(Links.clean(m.text), style: const TextStyle(height: 1.5)),
+            if (links.isNotEmpty) ...[
               const SizedBox(height: 10),
-              Text(lang.t('sources'),
+              Text(lang.t('open_site'),
                   style: TextStyle(
                       fontWeight: FontWeight.w600, color: scheme.onSurfaceVariant)),
-              for (final s in m.sources.take(5))
-                InkWell(
-                  onTap: () => launchUrl(Uri.parse(s.url),
-                      mode: LaunchMode.externalApplication),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Text('🔗 ${s.title.isEmpty ? s.url : s.title}',
-                        style: TextStyle(
-                            color: scheme.primary,
-                            decoration: TextDecoration.underline)),
-                  ),
-                ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  for (final s in links)
+                    ActionChip(
+                      avatar: const Icon(Icons.open_in_new, size: 18),
+                      label: Text(s.title, overflow: TextOverflow.ellipsis),
+                      onPressed: () => _openLink(s.url),
+                    ),
+                ],
+              ),
             ],
             Row(children: [
               TextButton.icon(
@@ -253,7 +256,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 icon: const Icon(Icons.copy),
                 label: Text(lang.t('copy')),
                 onPressed: () async {
-                  await Clipboard.setData(ClipboardData(text: _clean(m.text)));
+                  await Clipboard.setData(ClipboardData(text: Links.clean(m.text)));
                   if (mounted) {
                     ScaffoldMessenger.of(context)
                         .showSnackBar(SnackBar(content: Text(lang.t('copied'))));
@@ -313,9 +316,20 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // Light clean-up of markdown so plain text reads well.
-  static String _clean(String s) => s
-      .replaceAllMapped(RegExp(r'\*\*(.*?)\*\*'), (m) => m.group(1) ?? '')
-      .replaceAll(RegExp(r'^#{1,6}\s*', multiLine: true), '')
-      .replaceAll(RegExp(r'^\s*[*-]\s+', multiLine: true), '• ');
+  Future<void> _openLink(String url) async {
+    final uri = Uri.tryParse(url);
+    var ok = false;
+    if (uri != null) {
+      try {
+        ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (!ok) ok = await launchUrl(uri);
+      } catch (_) {
+        ok = false;
+      }
+    }
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(lang.t('open_failed'))));
+    }
+  }
 }

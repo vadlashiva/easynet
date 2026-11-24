@@ -64,6 +64,8 @@ class AppLang {
       'disclaimer':
           'EasyNet can make mistakes. Check important details on the official website.',
       'language': 'Language',
+      'open_site': 'Open website',
+      'open_failed': 'Could not open the website. Copy the address into your browser.',
     },
   );
 
@@ -107,6 +109,8 @@ class AppLang {
       'disclaimer':
           'EasyNet से गलती हो सकती है। ज़रूरी जानकारी आधिकारिक वेबसाइट पर जाँच लें।',
       'language': 'भाषा',
+      'open_site': 'वेबसाइट खोलें',
+      'open_failed': 'वेबसाइट नहीं खुल सकी। पता कॉपी करके ब्राउज़र में खोलें।',
     },
   );
 
@@ -150,6 +154,8 @@ class AppLang {
       'disclaimer':
           'EasyNet ತಪ್ಪು ಮಾಡಬಹುದು. ಮುಖ್ಯ ವಿವರಗಳನ್ನು ಅಧಿಕೃತ ವೆಬ್‌ಸೈಟ್‌ನಲ್ಲಿ ಪರಿಶೀಲಿಸಿ.',
       'language': 'ಭಾಷೆ',
+      'open_site': 'ವೆಬ್‌ಸೈಟ್ ತೆರೆಯಿರಿ',
+      'open_failed': 'ವೆಬ್‌ಸೈಟ್ ತೆರೆಯಲಾಗಲಿಲ್ಲ. ವಿಳಾಸವನ್ನು ನಕಲಿಸಿ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ.',
     },
   );
 }

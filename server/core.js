@@ -17,6 +17,7 @@ export function systemPrompt(lang) {
     '- You cannot pay, log in or submit forms for the user. Explain how they can do it themselves.',
     '- Warn about fake websites and agents who charge extra; prefer official sites.',
     '- If you are unsure or rules may have changed, say so and point to the official site.',
+    'Formatting: plain text with numbered steps. Write website addresses plainly, like www.example.gov.in. Do not use markdown links or ** around addresses.',
   ].join('\n');
 }
 
