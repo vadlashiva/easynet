@@ -65,22 +65,36 @@ export function parseBody(body) {
   return { lang, messages };
 }
 
-export async function askGemini({ lang, messages }, { apiKey, fetchFn = fetch } = {}) {
+export async function askGemini({ lang, messages }, { apiKey, fetchFn = fetch, model = MODEL } = {}) {
   if (!apiKey) throw Object.assign(new Error('GEMINI_API_KEY is not set'), { status: 500 });
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+  const useSearch = process.env.GEMINI_SEARCH !== 'off';
+  try {
+    return await callGemini({ lang, messages, apiKey, fetchFn, model, useSearch });
+  } catch (e) {
+    // Google Search grounding is not in the free tier for Gemini 3.x: answer without it.
+    if (useSearch && e.geminiStatus === 429) {
+      return await callGemini({ lang, messages, apiKey, fetchFn, model, useSearch: false });
+    }
+    throw e;
+  }
+}
+
+async function callGemini({ lang, messages, apiKey, fetchFn, model, useSearch }) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const payload = {
+    systemInstruction: { parts: [{ text: systemPrompt(lang) }] },
+    contents: messages.map((m) => ({ role: m.role, parts: [{ text: m.text }] })),
+    generationConfig: { temperature: 0.3, maxOutputTokens: 1500 },
+  };
+  if (useSearch) payload.tools = [{ google_search: {} }];
   const res = await fetchFn(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt(lang) }] },
-      contents: messages.map((m) => ({ role: m.role, parts: [{ text: m.text }] })),
-      tools: [{ google_search: {} }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1500 },
-    }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
-    throw Object.assign(new Error(`Gemini error ${res.status}: ${detail.slice(0, 200)}`), { status: 502 });
+    throw Object.assign(new Error(`Gemini error ${res.status}${useSearch ? '' : ' (no search)'}: ${detail.slice(0, 200)}`), { status: 502, geminiStatus: res.status });
   }
   const data = await res.json();
   const cand = (data.candidates || [])[0] || {};

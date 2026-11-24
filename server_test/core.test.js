@@ -92,3 +92,16 @@ test('handler: hides the error detail when the key is missing', async () => {
   assert.equal(r.json_.error, 'Could not answer right now');
   if (saved) process.env.GEMINI_API_KEY = saved;
 });
+
+test('askGemini retries without search when search quota is refused (429)', async () => {
+  const calls = [];
+  const fetchFn = async (_url, opts) => {
+    const body = JSON.parse(opts.body); calls.push(!!body.tools);
+    if (body.tools) return { ok: false, status: 429, text: async () => 'quota' };
+    return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: 'Steps' }] } }] }) };
+  };
+  const out = await askGemini({ lang: 'en', messages: [{ role: 'user', text: 'x' }] }, { apiKey: 'k', fetchFn });
+  assert.deepEqual(calls, [true, false]);
+  assert.equal(out.answer, 'Steps');
+  assert.deepEqual(out.sources, []);
+});
