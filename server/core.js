@@ -1,6 +1,6 @@
 // EasyNet server logic: cleans the question, asks Gemini (with Google Search), returns answer + sources.
 
-export const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+export const MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 const LANG_NAMES = { en: 'English', hi: 'Hindi', kn: 'Kannada' };
 const MAX_MESSAGES = 12;
 const MAX_CHARS = 2000;
